@@ -1,3 +1,4 @@
+const e = require('express')
 const mongoose = require('mongoose')
 const { Schema } = mongoose
 
@@ -6,6 +7,8 @@ const userSchema = mongoose.Schema({
     email: {type: String, required: true, unique: true},
     phone: {type: String, required: true},
     password: {type: String, required: true},
+    walletAddress: {type: String, required: true, unique: true},
+    role: { type: String, enum: ['admin', 'user'], required: true }
 }, {
     timestamps: true
 })

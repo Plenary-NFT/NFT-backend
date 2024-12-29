@@ -9,7 +9,8 @@ const jwtSecret = process.env.JWT_SECRET_TOKEN
 const generateToken = (user) => {
     const payload = {
         email: user.email,
-        id: user._id
+        id: user._id,
+        role: user.role
     }
 
     return jwt.sign(payload, jwtSecret, { expiresIn: '60d' })
@@ -23,35 +24,42 @@ const decodeToken = (token) => {
     }
 }
 
-const getCurrentUser = async (req, res, next) => {
-    try {
-        const bearerToken = req.headers.authorization
+const jwtMiddleware = (requiredRole) => {
+    return async (req, res, next) => {
+        try {
+            const bearerToken = req.headers.authorization
 
-        if(!bearerToken || !bearerToken.startsWith('Bearer ')){
-            return res.status(401).json({ message: "Authorization token not found or token missing" })
-        }   
+            if(!bearerToken || !bearerToken.startsWith('Bearer ')){
+                return res.status(401).json({ message: "Authorization token not found or token missing" })
+            }   
 
-        const token = bearerToken.split(' ')[1]
-        const decodedToken = decodeToken(token)
-        const email = decodedToken.email
-        console.log(email)
+            const token = bearerToken.split(' ')[1]
+            const decodedToken = decodeToken(token)
+            const email = decodedToken.email
+            console.log(email)
 
-        const objectId = new mongoose.Types.ObjectId(decodedToken.id)
-        const user = await User.findById(objectId)
-        if(!user){
-            return res.status(404).json({ message: "User not found" })
+            const objectId = new mongoose.Types.ObjectId(decodedToken.id)
+            const user = await User.findById(objectId)
+            if(!user){
+                return res.status(404).json({ message: "User not found" })
+            }
+            console.log(user)
+
+            req.user = user
+            
+            if(requiredRole && !requiredRole.includes(user.role)){
+                return res.status(403).json({ message: "Forbidden" })
+            }
+
+            next()
+        } catch (error) {
+            next(error)
         }
-        console.log(user)
 
-        req.user = user
-        next()
-    } catch (error) {
-        next(error)
     }
-
 }
 
 module.exports = {
-    getCurrentUser,
     generateToken,
+    jwtMiddleware,
 }
